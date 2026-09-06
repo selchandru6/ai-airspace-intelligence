@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flight Tracker Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0c1117;
+    --bg-accent: #121d27;
+    --panel: rgba(20, 29, 38, 0.92);
+    --panel-border: #293947;
+    --text: #e8f0f5;
+    --text-muted: #8fa1ad;
+    --accent-blue: #3987e5;
+    --accent-green: #1baf7a;
+    --accent-orange: #eda100;
+    --grid-line: #22313d;
+    --control-bg: #101a22;
+    --row-hover: #1d2b36;
+  }
+  body[data-theme="light"] {
+    --bg: #edf2f4;
+    --bg-accent: #dfe9ed;
+    --panel: rgba(255, 255, 255, 0.9);
+    --panel-border: #cbd8de;
+    --text: #18303b;
+    --text-muted: #607681;
+    --grid-line: #e2eaed;
+    --control-bg: #f7fafb;
+    --row-hover: #edf5f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(circle at 12% 0%, var(--bg-accent), var(--bg) 42%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    transition: background 350ms ease, color 350ms ease;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--panel-border);
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+  .live-dot::after {
+    content: '';
+    display: block;
+    width: 100%; height: 100%; border-radius: 50%;
+    background: var(--accent-green);
+    animation: ping 2s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(27,175,122,0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(27,175,122,0); }
+    100% { box-shadow: 0 0 0 0 rgba(27,175,122,0); }
+  }
+  @keyframes ping {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50% { transform: scale(2.4); opacity: 0; }
+  }
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes value-pop {
+    0% { transform: scale(0.96); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .toggle-group {
+    display: flex; background: var(--control-bg); border: 1px solid var(--panel-border);
+    border-radius: 6px; overflow: hidden;
+  }
+  .toggle-group button {
+    background: transparent; border: none; color: var(--text-muted);
+    padding: 7px 14px; font-size: 13px; cursor: pointer;
+  }
+  .toggle-group button.active { background: var(--accent-blue); color: white; }
+  select, button.action {
+    background: var(--control-bg); color: var(--text); border: 1px solid var(--panel-border);
+    border-radius: 6px; padding: 7px 10px; font-size: 13px; cursor: pointer;
+  }
+  button.action:hover, select:hover { border-color: var(--accent-blue); }
+  button.action:focus-visible, select:focus-visible, .toggle-group button:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
+  main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 14px 16px;
+    animation: rise-in 500ms both;
+    transition: transform 220ms ease, border-color 220ms ease, background 350ms ease;
+  }
+  .kpi-card:hover { transform: translateY(-3px); border-color: var(--accent-blue); }
+  .kpi-card:nth-child(2n) { animation-delay: 60ms; }
+  .kpi-card:nth-child(3n) { animation-delay: 120ms; }
+  .kpi-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .kpi-value { font-size: 26px; font-weight: 600; animation: value-pop 450ms ease-out; }
+  .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .charts-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 800px) { .charts-row { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 16px;
+    animation: rise-in 600ms both;
+    transition: background 350ms ease, border-color 350ms ease;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
+    margin: 0 0 12px; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .chart-wrap { position: relative; height: 220px; }
+  .insight-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .insight {
+    min-height: 78px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--accent-blue);
+    background: color-mix(in srgb, var(--panel) 82%, var(--accent-blue));
+    border-radius: 6px;
+  }
+  .insight-label { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .insight-value { display: block; margin-top: 8px; font-size: 18px; font-weight: 600; }
+  .insight-note { display: block; margin-top: 3px; color: var(--text-muted); font-size: 11px; }
+  .secondary-row { display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px; margin-bottom: 20px; }
+  .table-wrap.compact { max-height: 300px; }
+  .table-wrap { overflow-x: auto; }
+  tbody tr { animation: rise-in 400ms both; }
+  tbody tr:nth-child(2n) { animation-delay: 35ms; }
+  tbody tr:nth-child(3n) { animation-delay: 70ms; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; color: var(--text-muted); font-weight: 500;
+    padding: 8px 10px; border-bottom: 1px solid var(--panel-border);
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em;
+    cursor: pointer; white-space: nowrap;
+  }
+  th:hover { color: var(--text); }
+  td {
+    padding: 9px 10px; border-bottom: 1px solid var(--grid-line);
+    white-space: nowrap;
+  }
+  tr:hover td { background: var(--row-hover); }
+  .badge {
+    display: inline-block; padding: 3px 9px; border-radius: 20px;
+    font-size: 11px; font-weight: 500;
+  }
+  .badge-airline { background: rgba(57,135,229,0.15); color: #6badf0; }
+  .badge-cargo { background: rgba(237,161,0,0.15); color: #f0b93f; }
+  .badge-private { background: rgba(144,133,233,0.15); color: #ada4f5; }
+  .badge-military { background: rgba(227,73,72,0.15); color: #f0807f; }
+  .badge-unknown { background: rgba(139,143,156,0.15); color: var(--text-muted); }
+  .live-tag { color: var(--accent-green); font-size: 11px; font-weight: 500; }
+  .empty-state { text-align: center; color: var(--text-muted); padding: 40px 20px; }
+  .table-wrap { max-height: 480px; overflow-y: auto; }
+  .updated-at { font-size: 12px; color: var(--text-muted); }
+  .theme-toggle { min-width: 92px; }
+  @media (max-width: 1000px) { .insight-grid { grid-template-columns: repeat(3, 1fr); } .secondary-row { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) { main { padding: 14px; } header { padding: 14px; } .insight-grid { grid-template-columns: repeat(2, 1fr); } .controls { gap: 6px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="live-dot"></span> Flight Tracker Dashboard</h1>
+  <div class="controls">
+    <div class="toggle-group" id="rangeToggle">
+      <button data-range="today" class="active">Today</button>
+      <button data-range="all">All history</button>
+    </div>
+    <select id="refreshInterval">
+      <option value="0">Auto-refresh: Off</option>
+      <option value="5000">Every 5s</option>
+      <option value="10000" selected>Every 10s</option>
+      <option value="30000">Every 30s</option>
+      <option value="60000">Every 60s</option>
+    </select>
+    <button class="action theme-toggle" id="themeToggle" type="button" aria-pressed="false">Light mode</button>
+    <button class="action" id="refreshNow">Refresh now</button>
+    <span class="updated-at" id="updatedAt"></span>
+  </div>
+</header>
+
+<main>
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="insight-grid" id="insightGrid"></div>
+
+  <div class="charts-row">
+    <div class="panel">
+      <h2>Sightings by hour</h2>
+      <div class="chart-wrap"><canvas id="hourChart" role="img" aria-label="Bar chart of flight sightings grouped by hour">Sightings by hour of day</canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Flight category mix</h2>
+      <div class="chart-wrap"><canvas id="categoryChart" role="img" aria-label="Doughnut chart of flight categories: airline, cargo, private, military, unknown">Category breakdown</canvas></div>
+    </div>
+  </div>
+
+  <div class="secondary-row">
+    <div class="panel">
+      <h2>Signal profile</h2>
+      <div class="chart-wrap"><canvas id="signalChart" role="img" aria-label="Line chart of signal strength over time">Signal strength over time</canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Latest observations</h2>
+      <div class="table-wrap compact">
+        <table>
+          <thead><tr><th>Time</th><th>Callsign</th><th>Hex</th><th>Altitude</th><th>Speed</th><th>Position</th></tr></thead>
+          <tbody id="latestRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Flights (grouped by aircraft)</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="callsign">Callsign</th>
+            <th data-sort="hex">ICAO hex</th>
+            <th data-sort="category">Category</th>
+            <th data-sort="first">First seen</th>
+            <th data-sort="last">Last seen</th>
+            <th data-sort="maxAlt">Max alt (ft)</th>
+            <th data-sort="maxSpd">Max speed (kt)</th>
+            <th data-sort="points">Sightings</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="flightRows"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        No flight data yet for this range — leave the logger running and check back.
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const CSV_PATH = '/flight_log.csv';
+const LIVE_THRESHOLD_SECONDS = 30;
+
+const AIRLINE_PREFIXES = {
+  AAL:"American Airlines", DAL:"Delta Air Lines", UAL:"United Airlines",
+  SWA:"Southwest Airlines", JBU:"JetBlue", ASA:"Alaska Airlines",
+  SKW:"SkyWest", ENY:"Envoy Air", RPA:"Republic Airways", SCX:"Sun Country",
+  NKS:"Spirit Airlines", FFT:"Frontier Airlines", AAY:"Allegiant Air",
+  ACA:"Air Canada", BAW:"British Airways", DLH:"Lufthansa", AFR:"Air France",
+  KLM:"KLM", QTR:"Qatar Airways", UAE:"Emirates", JIA:"PSA Airlines (AA)"
+};
+const CARGO_PREFIXES = {
+  FDX:"FedEx", UPS:"UPS Airlines", GTI:"Atlas Air", ABX:"ABX Air",
+  CLX:"Cargolux", PAC:"Polar Air Cargo"
+};
+const MIL_PREFIXES = { RCH:"US Air Force (AMC)", CNV:"US Navy", SAM:"Special Air Mission" };
+
+let allRows = [];
+let currentRange = 'today';
+let refreshTimer = null;
+let sortKey = 'last';
+let sortDir = -1;
+let hourChart, categoryChart, signalChart;
+
+function classify(flight) {
+  const f = (flight || '').trim().toUpperCase();
+  if (!f) return { cat: 'unknown', label: 'Unknown', operator: '' };
+  const p3 = f.slice(0, 3);
+  if (AIRLINE_PREFIXES[p3]) return { cat: 'airline', label: 'Airline', operator: AIRLINE_PREFIXES[p3] };
+  if (CARGO_PREFIXES[p3]) return { cat: 'cargo', label: 'Cargo', operator: CARGO_PREFIXES[p3] };
+  for (const pfx in MIL_PREFIXES) {
+    if (f.startsWith(pfx)) return { cat: 'military', label: 'Military/Govt', operator: MIL_PREFIXES[pfx] };
+  }
+  if (/^N[0-9]/.test(f)) return { cat: 'private', label: 'Private/GA', operator: '' };
+  return { cat: 'unknown', label: 'Unknown', operator: '' };
+}
+
+function isToday(dateObj) {
+  const now = new Date();
+  return dateObj.getFullYear() === now.getFullYear()
+    && dateObj.getMonth() === now.getMonth()
+    && dateObj.getDate() === now.getDate();
+}
+
+async function loadData() {
+  try {
+    const res = await fetch(CSV_PATH + '?_=' + Date.now());
+    if (!res.ok) throw new Error('CSV not found');
+    const text = await res.text();
+    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+    allRows = parsed.data.map(r => ({
+      ...r,
+      _date: new Date(r.timestamp_utc),
+      altitude_ft: parseFloat(r.altitude_ft) || 0,
+      speed_kt: parseFloat(r.speed_kt) || 0,
+      rssi: parseFloat(r.rssi) || 0,
+    }));
+    document.getElementById('updatedAt').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    render();
+  } catch (e) {
+    document.getElementById('updatedAt').textContent = 'Could not load flight_log.csv — is the logger running?';
+  }
+}
+
+function getFilteredRows() {
+  if (currentRange === 'today') return allRows.filter(r => isToday(r._date));
+  return allRows;
+}
+
+function groupByAircraft(rows) {
+  const map = new Map();
+  for (const r of rows) {
+    const key = r.hex || 'unknown';
+    if (!map.has(key)) {
+      map.set(key, {
+        hex: key, callsign: '', first: r._date, last: r._date,
+        maxAlt: 0, maxSpd: 0, points: 0, category: 'unknown', operator: '',
+      });
+    }
+    const g = map.get(key);
+    g.points++;
+    if (r._date < g.first) g.first = r._date;
+    if (r._date > g.last) g.last = r._date;
+    if (r.altitude_ft > g.maxAlt) g.maxAlt = r.altitude_ft;
+    if (r.speed_kt > g.maxSpd) g.maxSpd = r.speed_kt;
+    if (r.flight && r.flight.trim()) g.callsign = r.flight.trim();
+  }
+  for (const g of map.values()) {
+    const c = classify(g.callsign);
+    g.category = c.cat; g.categoryLabel = c.label; g.operator = c.operator;
+  }
+  return Array.from(map.values());
+}
+
+function renderKpis(flights, rows) {
+  const now = Date.now();
+  const live = flights.filter(f => (now - f.last.getTime()) / 1000 < LIVE_THRESHOLD_SECONDS).length;
+  const byCat = { airline: 0, cargo: 0, private: 0, military: 0, unknown: 0 };
+  flights.forEach(f => byCat[f.category]++);
+
+  const cards = [
+    { label: 'Unique aircraft', value: flights.length },
+    { label: 'Currently live', value: live, sub: 'seen in last 30s' },
+    { label: 'Total sightings', value: rows.length },
+    { label: 'Airline', value: byCat.airline },
+    { label: 'Private / GA', value: byCat.private },
+    { label: 'Cargo', value: byCat.cargo },
+    { label: 'Military / Govt', value: byCat.military },
+  ];
+  document.getElementById('kpiRow').innerHTML = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value">${c.value}</div>
+      ${c.sub ? `<div class="kpi-sub">${c.sub}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderCharts(rows, flights) {
+  const hourCounts = new Array(24).fill(0);
+  rows.forEach(r => hourCounts[r._date.getHours()]++);
+
+  if (hourChart) hourChart.destroy();
+  hourChart = new Chart(document.getElementById('hourChart'), {
+    type: 'bar',
+    data: {
+      labels: hourCounts.map((_, i) => i + ':00'),
+      datasets: [{ data: hourCounts, backgroundColor: '#3987e5', borderRadius: 4, maxBarThickness: 18 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8b8f9c', maxRotation: 0, autoSkip: true }, grid: { display: false } },
+        y: { ticks: { color: '#8b8f9c' }, grid: { color: '#262932' } }
+      }
+    }
+  });
+
+  const catCounts = { airline: 0, cargo: 0, private: 0, military: 0, unknown: 0 };
+  flights.forEach(f => catCounts[f.category]++);
+  const catColors = { airline: '#3987e5', cargo: '#eda100', private: '#9085e9', military: '#e34948', unknown: '#8b8f9c' };
+  const catLabels = { airline: 'Airline', cargo: 'Cargo', private: 'Private/GA', military: 'Military/Govt', unknown: 'Unknown' };
+  const activeCats = Object.keys(catCounts).filter(k => catCounts[k] > 0);
+
+  if (categoryChart) categoryChart.destroy();
+  categoryChart = new Chart(document.getElementById('categoryChart'), {
+    type: 'doughnut',
+    data: {
+      labels: activeCats.map(k => catLabels[k]),
+      datasets: [{ data: activeCats.map(k => catCounts[k]), backgroundColor: activeCats.map(k => catColors[k]), borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '65%' }
+  });
+
+  const legendHtml = activeCats.map(k => `
+    <span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12px;color:var(--text-muted)">
+      <span style="width:9px;height:9px;border-radius:2px;background:${catColors[k]}"></span>${catLabels[k]} ${catCounts[k]}
+    </span>`).join('');
+  const existing = document.getElementById('catLegend');
+  if (existing) existing.remove();
+  const legendDiv = document.createElement('div');
+  legendDiv.id = 'catLegend';
+  legendDiv.style.marginTop = '10px';
+  legendDiv.innerHTML = legendHtml;
+  document.getElementById('categoryChart').closest('.panel').appendChild(legendDiv);
+
+  if (signalChart) signalChart.destroy();
+  const signalRows = [...rows].sort((a, b) => a._date - b._date).slice(-36);
+  signalChart = new Chart(document.getElementById('signalChart'), {
+    type: 'line',
+    data: {
+      labels: signalRows.map(r => r._date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
+      datasets: [{
+        data: signalRows.map(r => r.rssi), label: 'RSSI', borderColor: '#1baf7a',
+        backgroundColor: 'rgba(27,175,122,0.12)', fill: true, tension: 0.35,
+        pointRadius: 2, pointHoverRadius: 5,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 700, easing: 'easeOutQuart' },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: getCss('--text-muted'), maxRotation: 0, autoSkip: true }, grid: { display: false } },
+        y: { ticks: { color: getCss('--text-muted') }, grid: { color: getCss('--grid-line') }, title: { display: true, text: 'dBFS', color: getCss('--text-muted') } }
+      }
+    }
+  });
+}
+
+function getCss(name) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim();
+}
+
+function formatTime(date) {
+  return date instanceof Date && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString() : '—';
+}
+
+function renderInsights(rows, flights) {
+  const validRows = rows.filter(r => !Number.isNaN(r._date.getTime()));
+  const first = validRows.reduce((earliest, row) => row._date < earliest ? row._date : earliest, validRows[0]?._date || new Date());
+  const last = validRows.reduce((latest, row) => row._date > latest ? row._date : latest, validRows[0]?._date || new Date());
+  const avg = (field) => validRows.length ? validRows.reduce((sum, row) => sum + row[field], 0) / validRows.length : 0;
+  const withPosition = validRows.filter(r => r.lat && r.lon).length;
+  const cards = [
+    { label: 'Data window', value: validRows.length ? `${formatTime(first)} – ${formatTime(last)}` : 'No data', note: `${validRows.length.toLocaleString()} observations` },
+    { label: 'Average altitude', value: `${Math.round(avg('altitude_ft')).toLocaleString()} ft`, note: 'Across observed aircraft' },
+    { label: 'Average speed', value: `${Math.round(avg('speed_kt'))} kt`, note: 'Ground speed estimate' },
+    { label: 'Position coverage', value: `${validRows.length ? Math.round(withPosition / validRows.length * 100) : 0}%`, note: `${withPosition.toLocaleString()} with lat/lon` },
+    { label: 'Signal average', value: `${Math.round(avg('rssi'))} dBFS`, note: `${flights.length} tracked aircraft` },
+  ];
+  document.getElementById('insightGrid').innerHTML = cards.map(card => `
+    <div class="insight"><span class="insight-label">${card.label}</span><strong class="insight-value">${card.value}</strong><span class="insight-note">${card.note}</span></div>
+  `).join('');
+}
+
+function renderLatest(rows) {
+  const latest = [...rows].sort((a, b) => b._date - a._date).slice(0, 12);
+  document.getElementById('latestRows').innerHTML = latest.map(row => `
+    <tr><td>${formatTime(row._date)}</td><td>${row.flight?.trim() || '—'}</td><td>${row.hex || '—'}</td>
+    <td>${row.altitude_ft.toLocaleString()} ft</td><td>${Math.round(row.speed_kt)} kt</td>
+    <td>${row.lat && row.lon ? `${Number(row.lat).toFixed(2)}, ${Number(row.lon).toFixed(2)}` : '—'}</td></tr>
+  `).join('');
+}
+
+function renderTable(flights) {
+  const badgeClass = { airline: 'badge-airline', cargo: 'badge-cargo', private: 'badge-private', military: 'badge-military', unknown: 'badge-unknown' };
+  const now = Date.now();
+
+  const sorted = [...flights].sort((a, b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (av instanceof Date) { av = av.getTime(); bv = bv.getTime(); }
+    if (typeof av === 'string') return sortDir * av.localeCompare(bv);
+    return sortDir * (av - bv);
+  });
+
+  document.getElementById('emptyState').style.display = sorted.length ? 'none' : 'block';
+
+  document.getElementById('flightRows').innerHTML = sorted.map(f => {
+    const isLive = (now - f.last.getTime()) / 1000 < LIVE_THRESHOLD_SECONDS;
+    return `<tr>
+      <td>${f.callsign || '<span style="color:var(--text-muted)">—</span>'}</td>
+      <td style="color:var(--text-muted)">${f.hex}</td>
+      <td><span class="badge ${badgeClass[f.category]}">${f.categoryLabel}${f.operator ? ' · ' + f.operator : ''}</span></td>
+      <td>${f.first.toLocaleTimeString()}</td>
+      <td>${f.last.toLocaleTimeString()}</td>
+      <td>${f.maxAlt.toLocaleString()}</td>
+      <td>${Math.round(f.maxSpd)}</td>
+      <td>${f.points}</td>
+      <td>${isLive ? '<span class="live-tag">\u25CF LIVE</span>' : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function render() {
+  const rows = getFilteredRows();
+  const flights = groupByAircraft(rows);
+  renderKpis(flights, rows);
+  renderInsights(rows, flights);
+  renderCharts(rows, flights);
+  renderLatest(rows);
+  renderTable(flights);
+}
+
+function applyTheme(theme) {
+  document.body.dataset.theme = theme;
+  const isLight = theme === 'light';
+  const toggle = document.getElementById('themeToggle');
+  toggle.textContent = isLight ? 'Dark mode' : 'Light mode';
+  toggle.setAttribute('aria-pressed', String(isLight));
+  localStorage.setItem('dashboard-theme', theme);
+  if (allRows.length) render();
+}
+
+document.getElementById('rangeToggle').addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('#rangeToggle button').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  currentRange = e.target.dataset.range;
+  render();
+});
+
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    sortDir = (sortKey === key) ? -sortDir : -1;
+    sortKey = key;
+    render();
+  });
+});
+
+document.getElementById('refreshNow').addEventListener('click', loadData);
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  applyTheme(document.body.dataset.theme === 'light' ? 'dark' : 'light');
+});
+
+document.getElementById('refreshInterval').addEventListener('change', e => {
+  if (refreshTimer) clearInterval(refreshTimer);
+  const ms = parseInt(e.target.value, 10);
+  if (ms > 0) refreshTimer = setInterval(loadData, ms);
+});
+
+applyTheme(localStorage.getItem('dashboard-theme') || 'dark');
+loadData();
+refreshTimer = setInterval(loadData, 10000);
+</script>
+</body>
+</html>
