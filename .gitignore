@@ -1,21 +1,32 @@
-# --- Secrets / local TLS material (generate your own, see make-cert.sh) ---
+# --- Secrets / local config ---
+.env
+.env.*
+!.env.example
+
+# --- Local TLS material (generate with scripts/make-cert.sh) ---
+certs/*
+!certs/.gitkeep
+*.pem
 localhost.crt
 localhost.key
-*.pem
-*.key
 
-# --- Generated flight data ---
-flight_log.csv
-flight_log.sqlite3
-*.sqlite3
+# --- Logged flight data (generated) ---
+data/*
+!data/.gitkeep
+
+# --- Local run logs ---
+.run/
 
 # --- Python ---
 __pycache__/
 *.py[cod]
 *.egg-info/
+build/
+dist/
 .venv/
 venv/
 env/
+.eggs/
 
 # --- Editor / OS / tooling ---
 .claude/

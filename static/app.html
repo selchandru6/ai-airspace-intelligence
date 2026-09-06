@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ApexMoon Airspace</title>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/react-is@18/umd/react-is.production.min.js"></script>
+<script src="https://unpkg.com/prop-types/prop-types.js"></script>
+<script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="/ol/v6.3.1/ol.css">
+<script src="/ol/v6.3.1/ol.js"></script>
+
+<style>
+  :root {
+    --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+    --font-display: "Syne", var(--font-sans);
+    --font-mono: "JetBrains Mono", "SF Mono", Monaco, "Cascadia Code", monospace;
+
+    --text-kpi: 22px;
+    --text-heading: 14px;
+    --text-body: 13px;
+    --text-micro: 11px;
+
+    --space-2xs: 4px;
+    --space-xs: 8px;
+    --space-sm: 12px;
+    --space-md: 16px;
+    --space-lg: 24px;
+
+    --btn-height-sm: 28px;
+    --btn-height-md: 32px;
+    --btn-radius: 6px;
+    --btn-padding: 0 12px;
+
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-focus: rgba(34, 211, 238, 0.6);
+
+    --bg-void: #020617;
+    --bg-deep: #030712;
+    --bg: #06060b;
+    --panel: #0a0f1a;
+    --panel-2: #0f172a;
+    --border: var(--border-subtle);
+    --text: #F9FAFB;
+    --dim: #9ca3af;
+    --muted: #6b7280;
+    --cyan: #22D3EE;
+    --cyan-dark: #0EA5E9;
+    --gold: #FBBF24;
+    --violet: #7c4dff;
+    --green: #00e676;
+    --amber: #FBBF24;
+    --red: #ef5a5a;
+    --blue: #22D3EE;
+    --scale: 1;
+  }
+  html[data-theme="light"] {
+    --bg: #f4f6f8;
+    --bg-void: #eef2f6;
+    --bg-deep: #e8edf2;
+    --panel: #ffffff;
+    --panel-2: #f7f8fa;
+    --border-subtle: rgba(15, 23, 42, 0.08);
+    --border-focus: rgba(14, 165, 233, 0.55);
+    --text: #0f172a;
+    --dim: #64748b;
+    --muted: #94a3b8;
+    --cyan: #0891b2;
+    --cyan-dark: #0e7490;
+    --gold: #d97706;
+  }
+  html[data-tv="on"] { --scale: .78; }
+  * { box-sizing: border-box; }
+  html, body, #root { height: 100%; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 0% 0%, rgba(34, 211, 238, 0.10), transparent 42%),
+      radial-gradient(circle at 100% 0%, rgba(251, 191, 36, 0.08), transparent 40%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  header.app-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: 0 var(--space-md);
+    height: 56px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(2, 6, 23, 0.85);
+    backdrop-filter: blur(18px) saturate(1.4);
+    flex-wrap: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+  }
+  html[data-theme="light"] header.app-bar { background: rgba(255, 255, 255, 0.9); }
+  .brand { display: flex; align-items: center; gap: var(--space-sm); min-width: 0; }
+  .brand-mark {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--gold), #d97706 55%, #92400e);
+    flex-shrink: 0;
+  }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+  .brand-kicker {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: var(--text-heading);
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: var(--btn-height-sm);
+    padding: 0 10px;
+    border-radius: 100px;
+    background: rgba(34, 211, 238, 0.12);
+    border: 1px solid rgba(34, 211, 238, 0.22);
+    color: var(--cyan);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .live-badge .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--cyan);
+  }
+  .live-badge.is-live .dot { animation: pulse-dot 2s ease infinite; }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  .ctl { display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap; }
+  .seg {
+    display: flex;
+    background: var(--bg-void);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--btn-radius);
+    overflow: hidden;
+    height: var(--btn-height-sm);
+  }
+  .seg button {
+    background: none; border: none; color: var(--dim);
+    padding: var(--btn-padding); height: 100%;
+    font-size: var(--text-micro); font-family: var(--font-sans);
+    letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer;
+  }
+  .seg button.on { background: var(--cyan); color: var(--bg-void); font-weight: 600; }
+  select, button.btn, .search {
+    background: var(--bg-void);
+    color: var(--text);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--btn-radius);
+    height: var(--btn-height-sm);
+    padding: var(--btn-padding);
+    font-size: var(--text-micro);
+    font-family: var(--font-sans);
+    cursor: pointer;
+  }
+  .search { width: 200px; cursor: text; }
+  select:hover, button.btn:hover, .search:hover { border-color: var(--border-focus); }
+  select:focus-visible, button.btn:focus-visible, .search:focus-visible, .seg button:focus-visible {
+    outline: 2px solid var(--border-focus); outline-offset: 2px;
+  }
+  main {
+    height: calc(100vh - 56px);
+    padding: var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    min-height: 0;
+  }
+  .situation {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm);
+    padding: 0 var(--space-2xs);
+    color: var(--dim);
+    font-size: var(--text-micro);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .situation strong { color: var(--text); font-weight: 600; }
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--space-xs);
+    flex-shrink: 0;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--btn-radius);
+    padding: var(--space-xs) var(--space-sm);
+  }
+  .lab {
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 2px;
+  }
+  .val, .telemetry-val, td.num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .val { font-size: var(--text-kpi); font-weight: 600; color: var(--gold); line-height: 1.1; }
+  .sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--space-xs); flex: 1; min-height: 0; }
+  .map-stage {
+    position: relative; min-height: 0; overflow: hidden;
+    border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-void);
+  }
+  .map-wrap { height: 100%; padding: 0; overflow: hidden; }
+  #olmap { height: 100%; width: 100%; background: var(--bg-void); }
+  .map-cap, .legend, .map-controls {
+    position: absolute; z-index: 20;
+    background: rgba(10, 15, 26, 0.88);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--btn-radius);
+    color: var(--dim);
+  }
+  .map-cap {
+    top: var(--space-sm); left: var(--space-sm);
+    padding: 5px 10px;
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600;
+  }
+  .map-controls {
+    top: var(--space-sm); right: var(--space-sm);
+    display: flex; gap: 4px; padding: 4px; flex-wrap: wrap; max-width: 55%; justify-content: flex-end;
+  }
+  .map-controls button {
+    background: transparent; color: var(--dim);
+    border: 1px solid var(--border-subtle); border-radius: 4px;
+    height: 24px; padding: 0 8px; font-size: 10px; cursor: pointer;
+  }
+  .map-controls button.on { color: var(--bg-void); background: var(--cyan); border-color: var(--cyan); }
+  .legend { bottom: var(--space-sm); left: var(--space-sm); padding: var(--space-xs) var(--space-sm); font-size: 10px; }
+  .legend-bar { display: flex; height: 6px; width: 160px; border-radius: 3px; overflow: hidden; margin: 5px 0 3px; }
+  .legend-bar div { flex: 1; }
+  .legend-sc { display: flex; justify-content: space-between; }
+  .ol-popup {
+    background: var(--panel); border: 1px solid var(--border-subtle); border-radius: 8px;
+    padding: var(--space-sm); font-size: var(--text-body); min-width: 200px;
+  }
+  .ol-popup .t { font-family: var(--font-display); font-weight: 700; margin-bottom: 4px; }
+  .ol-popup .r { color: var(--dim); line-height: 1.6; font-size: var(--text-micro); }
+  .ol-close { position: absolute; top: 6px; right: 8px; cursor: pointer; color: var(--dim); }
+  .rail {
+    display: flex; flex-direction: column; min-height: 0;
+    background: var(--panel); border: 1px solid var(--border-subtle); border-radius: 8px; overflow: hidden;
+  }
+  .rail-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-xs) var(--space-sm);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .rail-head h2, .panel h2, .gf-panel h2 {
+    font-size: 10px; font-weight: 600; color: var(--muted);
+    margin: 0; text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .rail-tabs { display: flex; gap: 4px; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--border-subtle); }
+  .ac-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 2px var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-bottom: 1px solid var(--border-subtle);
+    cursor: pointer;
+  }
+  .ac-row:hover, .ac-row.on { background: var(--panel-2); }
+  .ac-row.on { border-left: 2px solid var(--cyan); }
+  .ac-id { font-weight: 600; font-size: var(--text-heading); }
+  .ac-meta { color: var(--dim); font-size: var(--text-micro); }
+  .ac-nums { display: flex; gap: var(--space-sm); font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--text-micro); color: var(--text); }
+  .scroll { flex: 1; min-height: 0; overflow-y: auto; }
+  .none { text-align: center; color: var(--muted); padding: var(--space-lg); font-size: var(--text-body); }
+  .stamp { font-size: var(--text-micro); color: var(--muted); font-family: var(--font-mono); }
+  .pill {
+    display: inline-block; padding: 1px 8px; border-radius: 100px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .p-airline { background: rgba(34, 211, 238, 0.14); color: var(--cyan); }
+  .p-cargo { background: rgba(251, 191, 36, 0.14); color: var(--gold); }
+  .p-private { background: rgba(124, 77, 255, 0.16); color: #c4b5fd; }
+  .p-business { background: rgba(14, 165, 233, 0.16); color: var(--cyan-dark); }
+  .p-military { background: rgba(239, 90, 90, 0.16); color: var(--red); }
+  .p-unknown { background: rgba(107, 114, 128, 0.16); color: var(--dim); }
+  .live { color: var(--green); font-weight: 600; font-size: 10px; letter-spacing: 0.08em; }
+  .type-txt { color: var(--dim); font-size: var(--text-micro); }
+  .state-climbing { color: var(--green); }
+  .state-descending { color: var(--gold); }
+  .state-level { color: var(--dim); }
+  .traffic-incoming { color: var(--green); }
+  .traffic-outgoing { color: var(--gold); }
+  .traffic-crossing { color: var(--cyan); }
+  .filters { display: flex; gap: 4px; flex-wrap: wrap; }
+  .chip {
+    height: 22px; padding: 0 8px; border-radius: 100px;
+    border: 1px solid var(--border-subtle); background: transparent;
+    color: var(--dim); font-size: 10px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .chip.on { border-color: var(--cyan); color: var(--cyan); background: rgba(34, 211, 238, 0.12); }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border-subtle);
+    border-radius: 8px; padding: var(--space-sm);
+  }
+  .today-grid {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-xs); flex: 1; min-height: 0;
+  }
+  .gf-panel {
+    background: var(--panel); border: 1px solid var(--border-subtle);
+    border-radius: 8px; padding: var(--space-sm); min-height: 0; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .gf-panel h2 { margin-bottom: var(--space-xs); }
+  .gf-wide { grid-column: span 2; }
+  table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--text-body); }
+  th {
+    text-align: left; color: var(--muted); font-weight: 500; cursor: pointer;
+    padding: 8px 8px; border-bottom: 1px solid var(--border-subtle);
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap;
+  }
+  th:hover { color: var(--text); }
+  th.sort-asc::after { content: " ▲"; }
+  th.sort-desc::after { content: " ▼"; }
+  td { padding: 8px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover, tbody tr.on { background: var(--panel-2); }
+  tbody tr.new { animation: flash 1.4s ease; }
+  @keyframes flash { 0% { background: rgba(34, 211, 238, 0.2); } 100% { background: transparent; } }
+  .feed { display: flex; flex-direction: column; }
+  .ev {
+    display: flex; align-items: center; gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-bottom: 1px solid var(--border-subtle); font-size: var(--text-micro);
+  }
+  .ev-ico { width: 16px; text-align: center; flex-shrink: 0; font-weight: 700; }
+  .ev-main { flex: 1; min-width: 0; }
+  .ev-name { font-weight: 600; }
+  .ev-meta, .ev-time { color: var(--dim); }
+  .bars { display: flex; flex-direction: column; gap: var(--space-xs); }
+  .bar-row { display: grid; grid-template-columns: 1fr auto; gap: var(--space-xs); }
+  .bar-name { font-size: var(--text-body); }
+  .bar-track { grid-column: 1 / -1; height: 4px; background: var(--bg-void); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; }
+  .session-item {
+    padding: var(--space-xs) var(--space-sm);
+    border-bottom: 1px solid var(--border-subtle); cursor: pointer;
+  }
+  .session-item:hover { background: var(--panel-2); }
+  .session-meta { color: var(--dim); font-size: 10px; margin-top: 2px; }
+  .detail-backdrop {
+    position: fixed; inset: 0; z-index: 1200;
+    background: rgba(2, 6, 23, 0.62); display: flex; justify-content: flex-end;
+  }
+  .detail-panel {
+    width: min(440px, 94vw); height: 100%; overflow-y: auto;
+    background: var(--panel); border-left: 1px solid var(--border-subtle);
+    padding: var(--space-lg);
+  }
+  .detail-head { display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-md); }
+  .detail-name { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+  .detail-close { border: 0; background: transparent; color: var(--dim); font-size: 22px; cursor: pointer; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xs); }
+  .detail-cell { padding: var(--space-sm); background: var(--bg-void); border: 1px solid var(--border-subtle); border-radius: var(--btn-radius); }
+  .detail-cell b { display: block; margin-top: 4px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .nearest-label { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .alert-banner {
+    background: rgba(239, 90, 90, 0.14); border: 1px solid var(--red);
+    color: var(--text); border-radius: var(--btn-radius);
+    padding: var(--space-xs) var(--space-sm); cursor: pointer; flex-shrink: 0;
+  }
+  .warn-banner {
+    background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.35);
+    color: var(--text); border-radius: var(--btn-radius);
+    padding: var(--space-xs) var(--space-sm); flex-shrink: 0; font-size: var(--text-micro);
+  }
+  .selected-card {
+    padding: var(--space-sm); border-bottom: 1px solid var(--border-subtle); cursor: pointer; flex-shrink: 0;
+  }
+  .selected-name { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+  .selected-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-xs); margin-top: var(--space-xs);
+  }
+  .selected-stats b {
+    display: block; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--text-body);
+  }
+  .dashboard-footer {
+    height: 22px; display: flex; align-items: center; justify-content: flex-end;
+    color: var(--muted); font-size: 10px; font-family: var(--font-mono); flex-shrink: 0;
+    padding: 0 var(--space-2xs);
+  }
+  html[data-tv="on"] body { overflow: hidden; }
+  html[data-tv="on"] main { height: calc(100vh - 56px); }
+  @media (max-width: 1100px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .workspace, .today-grid { grid-template-columns: 1fr; }
+    .gf-wide { grid-column: auto; }
+    .map-stage { min-height: 420px; }
+    main { height: auto; overflow: auto; }
+    header.app-bar { height: auto; padding: var(--space-xs) var(--space-sm); flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+const { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  PieChart, Pie, Cell, LineChart, Line, ScatterChart, Scatter, ZAxis,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } = Recharts;
+
+const CAT_COLOR = { airline:"#22D3EE", cargo:"#FBBF24", private:"#7c4dff",
+                    business:"#0EA5E9", military:"#ef5a5a", unknown:"#6b7280" };
+const CAT_NAME = { airline:"Airline", cargo:"Cargo", private:"Private/GA",
+                   business:"Business", military:"Military/Govt", unknown:"Unidentified" };
+const PILL = { airline:"p-airline", cargo:"p-cargo", private:"p-private",
+               business:"p-business", military:"p-military", unknown:"p-unknown" };
+const SERIES = ["#22D3EE","#FBBF24","#7c4dff","#00e676","#ef5a5a","#0EA5E9"];
+const ALT_STOPS = [[0,"#e8503a"],[2000,"#f0862c"],[4000,"#FBBF24"],[6000,"#a8d020"],
+                   [10000,"#00e676"],[20000,"#22D3EE"],[30000,"#7c4dff"],[40000,"#c084fc"]];
+
+function altColor(a) {
+  if (!a || a <= 0) return ALT_STOPS[0][1];
+  for (let i = ALT_STOPS.length - 1; i >= 0; i--) if (a >= ALT_STOPS[i][0]) return ALT_STOPS[i][1];
+  return ALT_STOPS[0][1];
+}
+
+const EV_STYLE = {
+  acquired: { icon:"→", color:"#00e676", verb:"acquired" },
+  climb:    { icon:"↑", color:"#22D3EE", verb:"climbing" },
+  descend:  { icon:"↓", color:"#FBBF24", verb:"descending" },
+  lost:     { icon:"×", color:"#6b7280", verb:"lost" },
+};
+
+function currentAlt(a) { return a.currentAlt || a.maxAlt || 0; }
+function currentSpd(a) { return a.currentSpd || a.maxSpd || 0; }
+function ident(a) { return a.registration || a.callsign || a.hex; }
+function tileUrl(theme) {
+  return theme === "light"
+    ? "https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    : "https://{a-c}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png";
+}
+
+function useCountUp(target) {
+  const [v, setV] = useState(target);
+  const prev = useRef(target);
+  useEffect(() => {
+    const s = prev.current, e = target;
+    if (s === e) return;
+    const t0 = performance.now();
+    let raf;
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / 500);
+      setV(Math.round(s + (e - s) * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick); else prev.current = e;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  return v;
+}
+
+function Kpi({ label, value, sub }) {
+  const numeric = typeof value === "number" && Number.isFinite(value);
+  const n = useCountUp(numeric ? value : 0);
+  return (
+    <div className="card">
+      <div className="lab">{label}</div>
+      <div className="val">{numeric ? n.toLocaleString() : value}</div>
+      {sub && <div className="sub">{sub}</div>}
+    </div>
+  );
+}
+
+function FlightMap({ aircraft, receiver, theme, selected, onSelect }) {
+  const elRef = useRef(null);
+  const mapRef = useRef(null);
+  const srcRef = useRef(null);
+  const tileRef = useRef(null);
+  const popRef = useRef(null);
+  const overlayRef = useRef(null);
+  const didInitFit = useRef(false);
+  const [layers, setLayers] = useState({ aircraft: true, callsigns: true, trails: true, rings: true });
+  const [autoFit, setAutoFit] = useState(false);
+
+  useEffect(() => {
+    if (mapRef.current || !elRef.current || typeof ol === "undefined") return;
+    const src = new ol.source.Vector();
+    const boundarySrc = new ol.source.Vector({
+      url: "/geojson/US_ARTCC_boundaries.geojson",
+      format: new ol.format.GeoJSON(),
+    });
+    const tiles = new ol.layer.Tile({
+      source: new ol.source.XYZ({
+        url: tileUrl(theme),
+        attributions: "© OpenStreetMap, © CARTO",
+        crossOrigin: "anonymous",
+      }),
+    });
+    const map = new ol.Map({
+      target: elRef.current,
+      layers: [
+        tiles,
+        new ol.layer.Vector({
+          source: boundarySrc,
+          style: new ol.style.Style({
+            stroke: new ol.style.Stroke({ color: "rgba(34,211,238,0.28)", width: 1 }),
+          }),
+        }),
+        new ol.layer.Vector({ source: src }),
+      ],
+      view: new ol.View({
+        center: ol.proj.fromLonLat([receiver.lon || -98, receiver.lat || 39]),
+        zoom: 6,
+      }),
+      controls: ol.control.defaults({ attribution: true }),
+    });
+    const overlay = new ol.Overlay({
+      element: popRef.current, positioning: "bottom-center", offset: [0, -16], stopEvent: true,
+    });
+    map.addOverlay(overlay);
+    map.on("singleclick", evt => {
+      const f = map.forEachFeatureAtPixel(evt.pixel, ft => ft, { hitTolerance: 8 });
+      if (f && f.get("ac")) {
+        onSelect(f.get("ac"));
+        overlay.setPosition(f.getGeometry().getFirstCoordinate
+          ? f.getGeometry().getFirstCoordinate() : evt.coordinate);
+      } else {
+        overlay.setPosition(undefined);
+      }
+    });
+    map.on("pointermove", evt => {
+      map.getTargetElement().style.cursor = map.hasFeatureAtPixel(evt.pixel, { hitTolerance: 8 }) ? "pointer" : "";
+    });
+    mapRef.current = map;
+    srcRef.current = src;
+    tileRef.current = tiles;
+    overlayRef.current = overlay;
+  }, [receiver, onSelect, theme]);
+
+  useEffect(() => {
+    if (!tileRef.current) return;
+    tileRef.current.setSource(new ol.source.XYZ({
+      url: tileUrl(theme),
+      attributions: "© OpenStreetMap, © CARTO",
+      crossOrigin: "anonymous",
+    }));
+  }, [theme]);
+
+  useEffect(() => {
+    const src = srcRef.current, map = mapRef.current;
+    if (!src || !map) return;
+    src.clear();
+    const centre = ol.proj.fromLonLat([receiver.lon || -98, receiver.lat || 39]);
+    const rec = new ol.Feature({ geometry: new ol.geom.Point(centre) });
+    rec.setStyle(new ol.style.Style({
+      image: new ol.style.Circle({
+        radius: 5,
+        fill: new ol.style.Fill({ color: "#22D3EE" }),
+        stroke: new ol.style.Stroke({ color: "#fff", width: 1.5 }),
+      }),
+    }));
+    src.addFeature(rec);
+
+    if (layers.rings) [25, 50, 100, 150, 200].forEach(nm => {
+      const ring = new ol.Feature({ geometry: new ol.geom.Circle(centre, nm * 1852) });
+      ring.setStyle(new ol.style.Style({
+        stroke: new ol.style.Stroke({ color: "rgba(34,211,238,0.22)", width: 1, lineDash: [4, 6] }),
+      }));
+      src.addFeature(ring);
+    });
+
+    aircraft.forEach(a => {
+      if (layers.trails && a.path && a.path.length >= 2) for (let i = 1; i < a.path.length; i++) {
+        const p0 = a.path[i - 1], p1 = a.path[i];
+        const seg = new ol.Feature({
+          geometry: new ol.geom.LineString([
+            ol.proj.fromLonLat([p0.lon, p0.lat]),
+            ol.proj.fromLonLat([p1.lon, p1.lat]),
+          ]),
+        });
+        seg.set("ac", a);
+        seg.setStyle(new ol.style.Style({
+          stroke: new ol.style.Stroke({
+            color: altColor(p1.alt),
+            width: selected?.hex === a.hex ? 4 : a.live ? 3 : 1.5,
+          }),
+        }));
+        src.addFeature(seg);
+      }
+
+      if (layers.aircraft && a.lastPos) {
+        const pt = new ol.Feature({
+          geometry: new ol.geom.Point(ol.proj.fromLonLat([a.lastPos.lon, a.lastPos.lat])),
+        });
+        pt.set("ac", a);
+        const col = a.alert?.level === "CRITICAL" ? "#ef5a5a" : altColor(currentAlt(a));
+        pt.setStyle(new ol.style.Style({
+          image: new ol.style.RegularShape({
+            points: 3,
+            radius: selected?.hex === a.hex ? 12 : a.live ? 9 : 6,
+            rotation: ((a.lastHdg || 0) * Math.PI) / 180,
+            fill: new ol.style.Fill({ color: col }),
+            stroke: new ol.style.Stroke({ color: "rgba(0,0,0,0.5)", width: 1 }),
+          }),
+          text: layers.callsigns && (selected?.hex === a.hex || a.live) ? new ol.style.Text({
+            text: ident(a),
+            offsetY: -18,
+            font: "600 11px DM Sans, sans-serif",
+            fill: new ol.style.Fill({ color: col }),
+            stroke: new ol.style.Stroke({ color: "rgba(0,0,0,0.65)", width: 2.5 }),
+          }) : undefined,
+        }));
+        if (selected?.hex === a.hex) pt.setZIndex(100);
+        src.addFeature(pt);
+      }
+    });
+
+    const shouldFit = autoFit || !didInitFit.current;
+    const positions = [centre, ...aircraft.filter(a => a.lastPos).map(a => ol.proj.fromLonLat([a.lastPos.lon, a.lastPos.lat]))];
+    const ext = ol.extent.boundingExtent(positions);
+    if (shouldFit && isFinite(ext[0]) && ext[0] !== ext[2]) {
+      map.getView().fit(ext, { padding: [50, 50, 50, 50], maxZoom: 11, duration: didInitFit.current ? 400 : 0 });
+      didInitFit.current = true;
+      if (autoFit) map.getView().setZoom(Math.max(6, Math.min(10, map.getView().getZoom())));
+    }
+  }, [aircraft, receiver, layers, autoFit, selected]);
+
+  useEffect(() => {
+    if (mapRef.current) setTimeout(() => mapRef.current.updateSize(), 150);
+  }, [theme, selected]);
+
+  return (
+    <div className="map-wrap">
+      <div className="map-cap">Live map</div>
+      <div className="map-controls">
+        <button className={autoFit ? "on" : ""} onClick={() => { didInitFit.current = false; setAutoFit(v => !v); }}>Auto fit</button>
+        {Object.entries({ aircraft:"Aircraft", callsigns:"Labels", trails:"Trails", rings:"Rings" }).map(([key, label]) => (
+          <button key={key} className={layers[key] ? "on" : ""} onClick={() => setLayers(v => ({ ...v, [key]: !v[key] }))}>{label}</button>
+        ))}
+      </div>
+      <div id="olmap" ref={elRef}></div>
+      <div ref={popRef}>
+        {selected && (
+          <div className="ol-popup">
+            <span className="ol-close" onClick={() => { onSelect(null); overlayRef.current.setPosition(undefined); }}>×</span>
+            <div className="t">{ident(selected)}</div>
+            <div className="r">
+              {selected.typeName || selected.typeCode || "Type unknown"}<br/>
+              {selected.operatorLabel}<br/>
+              {Math.round(currentAlt(selected)).toLocaleString()} ft · {Math.round(currentSpd(selected))} kt · {Math.round(selected.currentHdg || 0)}°<br/>
+              {selected.distance} NM · {selected.state}
+              {selected.live && <span style={{ color: "var(--green)" }}><br/>LIVE</span>}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="legend">
+        Altitude
+        <div className="legend-bar">{ALT_STOPS.map((s, i) => <div key={i} style={{ background: s[1] }}></div>)}</div>
+        <div className="legend-sc"><span>0</span><span>10k</span><span>20k</span><span>40k ft</span></div>
+      </div>
+    </div>
+  );
+}
+
+function HourlyChart({ hourly }) {
+  const data = hourly.map(h => ({ hour: String(h.hour).padStart(2, "0"), count: h.count }));
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false}/>
+        <XAxis dataKey="hour" tick={{ fill:"var(--dim)", fontSize:10 }} interval={1} axisLine={false} tickLine={false}/>
+        <YAxis tick={{ fill:"var(--dim)", fontSize:10 }} axisLine={false} tickLine={false} allowDecimals={false}/>
+        <Tooltip contentStyle={{ background:"var(--panel)", border:"1px solid var(--border-subtle)", borderRadius:6, fontSize:12 }}/>
+        <Bar dataKey="count" fill="#22D3EE" radius={[3,3,0,0]}/>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function CategoryChart({ categories }) {
+  const data = Object.entries(categories).filter(([,v]) => v > 0)
+    .map(([k,v]) => ({ name: CAT_NAME[k] || k, value: v, key: k }));
+  if (!data.length) return <div className="none">No data yet</div>;
+  return (
+    <React.Fragment>
+      <ResponsiveContainer width="100%" height={180}>
+        <PieChart>
+          <Pie data={data} dataKey="value" nameKey="name" innerRadius={48} outerRadius={74} paddingAngle={3}>
+            {data.map((d,i) => <Cell key={i} fill={CAT_COLOR[d.key]} stroke="var(--panel)" strokeWidth={2}/>)}
+          </Pie>
+          <Tooltip contentStyle={{ background:"var(--panel)", border:"1px solid var(--border-subtle)", borderRadius:6, fontSize:12 }}/>
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="filters" style={{ marginTop: 8 }}>
+        {data.map(d => (
+          <span key={d.key} className="ac-meta">
+            <span style={{ display:"inline-block", width:8, height:8, borderRadius:2, background:CAT_COLOR[d.key], marginRight:5 }}></span>
+            {d.name} {d.value}
+          </span>
+        ))}
+      </div>
+    </React.Fragment>
+  );
+}
+
+function TopList({ items, color, empty }) {
+  if (!items || !items.length) return <div className="none">{empty}</div>;
+  const max = Math.max(...items.map(i => i.count));
+  return (
+    <div className="bars">
+      {items.map((it, i) => (
+        <div key={it.name}>
+          <div className="bar-row">
+            <span className="bar-name">{it.name}</span>
+            <span className="telemetry-val" style={{ color:"var(--dim)", fontSize:12 }}>{it.count}</span>
+          </div>
+          <div className="bar-track">
+            <div className="bar-fill" style={{ width:(it.count / max * 100)+"%", background: color || SERIES[i % SERIES.length] }}></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AltitudeTrend({ aircraft }) {
+  const top = [...aircraft].sort((a,b) => b.points - a.points).slice(0, 5);
+  if (!top.length) return <div className="none">No tracks yet</div>;
+  const times = new Set();
+  top.forEach(a => a.track.forEach(p => times.add(p.t)));
+  const data = Array.from(times).sort().map(t => {
+    const row = { t: new Date(t).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" }) };
+    top.forEach(a => { const p = a.track.find(x => x.t === t); if (p) row[a.hex] = p.alt; });
+    return row;
+  });
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false}/>
+        <XAxis dataKey="t" tick={{ fill:"var(--dim)", fontSize:10 }} axisLine={false} tickLine={false} minTickGap={40}/>
+        <YAxis tick={{ fill:"var(--dim)", fontSize:10 }} axisLine={false} tickLine={false}/>
+        <Tooltip contentStyle={{ background:"var(--panel)", border:"1px solid var(--border-subtle)", borderRadius:6, fontSize:12 }}/>
+        {top.map((a,i) => (
+          <Line key={a.hex} type="monotone" dataKey={a.hex} name={ident(a)}
+                stroke={SERIES[i % SERIES.length]} dot={false} strokeWidth={2} connectNulls/>
+        ))}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+function RangeAlt({ aircraft }) {
+  const pts = aircraft.filter(a => a.maxDist > 0).map(a => ({
+    x: a.maxDist, y: currentAlt(a), z: a.points, name: ident(a), category: a.category
+  }));
+  if (!pts.length) return <div className="none">No range data yet</div>;
+  const byCat = {};
+  pts.forEach(p => { (byCat[p.category] = byCat[p.category] || []).push(p); });
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <ScatterChart margin={{ top:8, right:12, bottom:4, left:0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)"/>
+        <XAxis type="number" dataKey="x" name="Range" unit=" NM" tick={{ fill:"var(--dim)", fontSize:10 }} axisLine={false} tickLine={false}/>
+        <YAxis type="number" dataKey="y" name="Altitude" tick={{ fill:"var(--dim)", fontSize:10 }} axisLine={false} tickLine={false}/>
+        <ZAxis type="number" dataKey="z" range={[40, 280]}/>
+        <Tooltip contentStyle={{ background:"var(--panel)", border:"1px solid var(--border-subtle)", borderRadius:6, fontSize:12 }}/>
+        {Object.entries(byCat).map(([c,d]) => (
+          <Scatter key={c} name={CAT_NAME[c]} data={d} fill={CAT_COLOR[c]} fillOpacity={.8}/>
+        ))}
+      </ScatterChart>
+    </ResponsiveContainer>
+  );
+}
+
+function CoverageChart({ coverage }) {
+  const data = coverage.filter((_, i) => i % 4 === 0).map(p => ({
+    bearing: `${p.bearing}°`, range: Math.max(p.low, p.mid, p.high),
+  }));
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <RadarChart data={data}>
+        <PolarGrid stroke="rgba(255,255,255,0.08)"/>
+        <PolarAngleAxis dataKey="bearing" tick={{ fill:"var(--dim)", fontSize:9 }}/>
+        <PolarRadiusAxis tick={{ fill:"var(--dim)", fontSize:8 }}/>
+        <Radar name="Maximum range" dataKey="range" stroke="#22D3EE" fill="#22D3EE" fillOpacity={0.22}/>
+        <Tooltip contentStyle={{ background:"var(--panel)", border:"1px solid var(--border-subtle)", borderRadius:6, fontSize:12 }}/>
+      </RadarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function EventFeed({ events }) {
+  const [importantOnly, setImportantOnly] = useState(true);
+  if (!events || !events.length) return <div className="none">Nothing yet</div>;
+  const visible = importantOnly ? events.filter(e => e.kind === "acquired" || e.kind === "lost") : events;
+  return (
+    <div className="scroll">
+      <div className="rail-head">
+        <h2>Events</h2>
+        <button className="btn" onClick={() => setImportantOnly(v => !v)}>{importantOnly ? "All" : "Acquire / lose"}</button>
+      </div>
+      <div className="feed">
+        {visible.map((e, i) => {
+          const s = EV_STYLE[e.kind] || EV_STYLE.acquired;
+          return (
+            <div className="ev" key={e.t + e.hex + e.kind + i}>
+              <span className="ev-ico" style={{ color: s.color }}>{s.icon}</span>
+              <span className="ev-main">
+                <span className="ev-name">{e.flight || e.hex}</span>
+                {e.type && <span className="ev-meta"> · {e.type}</span>}
+                <div className="ev-meta">{s.verb} — {e.detail}</div>
+              </span>
+              <span className="ev-time">{new Date(e.t).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" })}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SessionTimeline({ sessions, onSelect, aircraft }) {
+  if (!sessions || !sessions.length) return <div className="none">No coverage windows yet.</div>;
+  return (
+    <div className="scroll">
+      {sessions.map(session => {
+        const target = aircraft.find(item => item.hex === session.hex);
+        return (
+          <div className="session-item" key={session.started + session.hex} onClick={() => target && onSelect(target)}>
+            <strong>{session.flight || session.hex}</strong>
+            <div className="session-meta">{session.status} · {session.durationMinutes} min · {session.observations} obs</div>
+            <div className="session-meta">{new Date(session.started).toLocaleTimeString()} – {new Date(session.ended).toLocaleTimeString()}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AircraftRail({ aircraft, selected, onSelect }) {
+  if (!aircraft.length) return <div className="none">No aircraft in this filter.</div>;
+  return (
+    <div className="scroll">
+      {aircraft.map(a => (
+        <div key={a.hex} className={"ac-row" + (selected?.hex === a.hex ? " on" : "")} onClick={() => onSelect(a)}>
+          <div>
+            <div className="ac-id">{ident(a)}</div>
+            <div className="ac-meta">{a.typeName || a.typeCode || "Unknown type"} · {a.operatorLabel}</div>
+          </div>
+          <div style={{ textAlign:"right" }}>
+            {a.live ? <div className="live">LIVE</div> : <div className="ac-meta">{new Date(a.last).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" })}</div>}
+            <div className="ac-nums">
+              <span className="num">{Math.round(currentAlt(a)).toLocaleString()} ft</span>
+              <span className="num">{Math.round(currentSpd(a))} kt</span>
+              <span className="num">{a.distance} nm</span>
+              <span className={"state-" + a.state}>{a.state === "climbing" ? "▲" : a.state === "descending" ? "▼" : "–"}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AircraftTable({ aircraft, selected, onSelect }) {
+  const [key, setKey] = useState("distance");
+  const [dir, setDir] = useState(1);
+  const sorted = useMemo(() => [...aircraft].sort((a, b) => {
+    const av = key === "currentAlt" ? currentAlt(a) : key === "currentSpd" ? currentSpd(a) : a[key];
+    const bv = key === "currentAlt" ? currentAlt(b) : key === "currentSpd" ? currentSpd(b) : b[key];
+    if (typeof av === "string") return dir * String(av).localeCompare(String(bv));
+    return dir * ((av || 0) - (bv || 0));
+  }), [aircraft, key, dir]);
+  if (!sorted.length) return <div className="none">Nothing tracked in this range.</div>;
+  const cols = [["callsign","Flight"],["typeName","Aircraft"],["category","Category"],
+                ["currentAlt","Alt ft"],["currentSpd","Spd kt"],["distance","Dist nm"],["state","V/S"]];
+  return (
+    <div className="scroll">
+      <table>
+        <thead><tr>
+          {cols.map(([k, l]) => (
+            <th key={k} className={key === k ? (dir > 0 ? "sort-asc" : "sort-desc") : ""} onClick={() => { setDir(key === k ? -dir : 1); setKey(k); }}>{l}</th>
+          ))}
+          <th></th>
+        </tr></thead>
+        <tbody>
+          {sorted.map(a => (
+            <tr key={a.hex} className={selected?.hex === a.hex ? "on" : ""} onClick={() => onSelect(a)}>
+              <td>{a.callsign || a.hex}<div className="type-txt">{a.hex}</div></td>
+              <td>{a.typeName || a.typeCode || "—"}<div className="type-txt">{a.registration}</div></td>
+              <td><span className={"pill " + PILL[a.category]}>{a.categoryLabel}</span><div className="type-txt">{a.operatorLabel}</div></td>
+              <td className="num">{Math.round(currentAlt(a)).toLocaleString()}</td>
+              <td className="num">{Math.round(currentSpd(a))}</td>
+              <td className="num">{a.distance}</td>
+              <td className={"state-" + a.state}>{a.state === "climbing" ? "▲" : a.state === "descending" ? "▼" : "—"}</td>
+              <td>{a.live && <span className="live">LIVE</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function FullscreenToggle({ tv, setTv }) {
+  const toggle = async () => {
+    const next = !tv;
+    setTv(next);
+    if (next && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+    else if (!next && document.exitFullscreen) await document.exitFullscreen();
+  };
+  return <button className="btn" onClick={toggle}>{tv ? "Exit TV" : "TV"}</button>;
+}
+
+function AircraftDetail({ aircraft, onClose }) {
+  if (!aircraft) return null;
+  const t = aircraft.telemetry || {};
+  const stateLabel = aircraft.state === "climbing" ? "Climbing" : aircraft.state === "descending" ? "Descending" : "Level";
+  const cells = [
+    ["ICAO hex", aircraft.hex],
+    ["Flight", aircraft.callsign || "Unknown"],
+    ["Altitude now", `${Math.round(currentAlt(aircraft)).toLocaleString()} ft`],
+    ["Ground speed now", `${Math.round(currentSpd(aircraft))} kt`],
+    ["Heading", `${Math.round(aircraft.currentHdg || aircraft.lastHdg || 0)}°`],
+    ["Distance", `${aircraft.distance} nm`],
+    ["Bearing", `${aircraft.bearing}°`],
+    ["Vertical rate", `${Math.round(t.baroRate || aircraft.currentRate || 0)} ft/min`],
+    ["Max altitude", `${Math.round(aircraft.maxAlt).toLocaleString()} ft`],
+    ["Max speed", `${Math.round(aircraft.maxSpd)} kt`],
+    ["Squawk", t.squawk || "—"],
+    ["Signal", aircraft.bestRssi == null ? "—" : `${aircraft.bestRssi} dBFS`],
+  ];
+  return (
+    <div className="detail-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
+      <aside className="detail-panel">
+        <div className="detail-head">
+          <div>
+            <div className="detail-name">{ident(aircraft)}</div>
+            <div className={`type-txt state-${aircraft.state}`}>{stateLabel} · {aircraft.typeName || aircraft.typeCode || "Type unknown"}</div>
+          </div>
+          <button className="detail-close" onClick={onClose}>×</button>
+        </div>
+        <div className="detail-grid">
+          <div className="detail-cell"><span className="nearest-label">Registration</span><b>{aircraft.registration || "Not identified"}</b></div>
+          <div className="detail-cell"><span className="nearest-label">Category</span><b>{aircraft.categoryLabel}</b></div>
+          <div className="detail-cell"><span className="nearest-label">Operator</span><b>{aircraft.operatorLabel}</b></div>
+          {cells.map(([label, value]) => (
+            <div className="detail-cell" key={label}><span className="nearest-label">{label}</span><b>{value}</b></div>
+          ))}
+          <div className={`detail-cell traffic-${aircraft.trafficDirection}`}>
+            <span className="nearest-label">Relative to receiver</span><b>{aircraft.trafficDirection}</b>
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function App() {
+  const [theme, setTheme] = useState(localStorage.getItem("ft-theme") || "dark");
+  const [tv, setTv] = useState(localStorage.getItem("ft-tv") === "1");
+  const [mode, setMode] = useState("now");
+  const [range, setRange] = useState("hour");
+  const [ms, setMs] = useState(10000);
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [query, setQuery] = useState("");
+  const [liveOnly, setLiveOnly] = useState(true);
+  const [category, setCategory] = useState("all");
+  const [railTab, setRailTab] = useState("aircraft");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("ft-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-tv", tv ? "on" : "off");
+    localStorage.setItem("ft-tv", tv ? "1" : "0");
+  }, [tv]);
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/data?range=${range}`);
+      if (!r.ok) throw new Error();
+      setData(await r.json());
+      setErr(null);
+    } catch { setErr("Cannot reach the API — is api_server.py running?"); }
+  }, [range]);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!ms) return;
+    const id = setInterval(load, ms);
+    return () => clearInterval(id);
+  }, [ms, load]);
+
+  const aircraft = data?.aircraft || [];
+  const filtered = useMemo(() => {
+    const matches = aircraft.filter(a => {
+      if (category !== "all" && a.category !== category) return false;
+      const hay = `${a.callsign} ${a.hex} ${a.registration || ""} ${a.telemetry?.squawk || ""}`.toLowerCase();
+      return hay.includes(query.toLowerCase());
+    });
+    if (!liveOnly) return matches;
+    const live = matches.filter(a => a.live);
+    return live.length ? live : matches;
+  }, [aircraft, liveOnly, category, query]);
+
+  const focus = selected && aircraft.find(a => a.hex === selected.hex) || selected || data?.leaderboard?.nearest;
+  const situation = data ? [
+    `${data.kpis.live_count} live`,
+    focus ? `nearest ${ident(focus)} ${focus.distance} nm ${focus.trafficDirection}` : null,
+    data.kpis.climbing ? `${data.kpis.climbing} climbing` : null,
+    data.kpis.incoming ? `${data.kpis.incoming} inbound` : null,
+  ].filter(Boolean).join("  ·  ") : "";
+
+  return (
+    <React.Fragment>
+      <header className="app-bar">
+        <div className="brand">
+          <span className="brand-mark"></span>
+          <div className="brand-text">
+            <span className="brand-kicker">ApexMoon</span>
+            <h1>Airspace</h1>
+          </div>
+          <span className={"live-badge" + (data?.kpis.live_count ? " is-live" : "")}>
+            <span className="dot"></span>{data ? `${data.kpis.live_count} live` : "standby"}
+          </span>
+        </div>
+        <div className="ctl">
+          <div className="seg">
+            <button className={mode === "now" ? "on" : ""} onClick={() => setMode("now")}>Now</button>
+            <button className={mode === "today" ? "on" : ""} onClick={() => setMode("today")}>Report</button>
+          </div>
+          <div className="seg">
+            {[["hour","1h"],["today","Today"],["week","7d"],["all","All"]].map(([id, label]) => (
+              <button key={id} className={range === id ? "on" : ""} onClick={() => setRange(id)}>{label}</button>
+            ))}
+          </div>
+          <input className="search" placeholder="Search flight, hex, squawk" value={query} onChange={e => setQuery(e.target.value)} />
+          <select value={ms} onChange={e => setMs(Number(e.target.value))}>
+            <option value={0}>Refresh off</option>
+            <option value={5000}>5s</option>
+            <option value={10000}>10s</option>
+            <option value={30000}>30s</option>
+          </select>
+          <button className="btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? "Light" : "Dark"}</button>
+          <FullscreenToggle tv={tv} setTv={setTv}/>
+        </div>
+      </header>
+
+      <main>
+        {err && <div className="none">{err}</div>}
+        {!err && !data && <div className="none">Loading airspace…</div>}
+        {data && (
+          <React.Fragment>
+            {!data.receiver.configured && (
+              <div className="warn-banner">Receiver lat/lon is unset (0,0). Range, bearing, and map center are wrong until RECEIVER_LAT and RECEIVER_LON are set.</div>
+            )}
+            {data.aircraft.filter(a => a.alert?.level === "CRITICAL").map(a => (
+              <div key={a.hex} className="alert-banner" onClick={() => setSelected(a)}>
+                {a.alert.title} · {ident(a)} · squawk {a.alert.code || "—"}
+              </div>
+            ))}
+            <div className="situation">
+              <span>{situation}</span>
+              <span className="stamp">{new Date(data.generated_at).toLocaleTimeString()}</span>
+            </div>
+            <div className="kpis">
+              <Kpi label="Live now" value={data.kpis.live_count} sub={data.kpis.stale_count ? `${data.kpis.stale_count} stale` : "last 30s"}/>
+              <Kpi label="In view" value={data.kpis.unique_aircraft}/>
+              <Kpi label="Nearest" value={data.leaderboard.nearest ? data.leaderboard.nearest.distance : 0} sub="nm"/>
+              <Kpi label="Climbing" value={data.kpis.climbing} sub={`${data.kpis.descending} descending`}/>
+              <Kpi label="Types" value={data.kpis.identified_types}/>
+              <Kpi label="Observations" value={data.kpis.observations || data.kpis.total_sightings}/>
+            </div>
+            <div className="filters">
+              <button className={"chip" + (liveOnly ? " on" : "")} onClick={() => setLiveOnly(v => !v)}>Live</button>
+              {[["all","All"],["airline","Airline"],["cargo","Cargo"],["private","GA"],["business","Biz"],["military","Mil"]].map(([id, label]) => (
+                <button key={id} className={"chip" + (category === id ? " on" : "")} onClick={() => setCategory(id)}>{label}</button>
+              ))}
+            </div>
+
+            {mode === "now" ? (
+              <div className="workspace">
+                <div className="map-stage">
+                  <FlightMap aircraft={filtered.length ? filtered : aircraft} receiver={data.receiver} theme={theme} selected={focus} onSelect={setSelected}/>
+                </div>
+                <aside className="rail">
+                  {focus && (
+                    <div className="selected-card" onClick={() => setSelected(focus)}>
+                      <div className="lab">{focus.live ? "Selected / live" : "Selected / last seen"}</div>
+                      <div className="selected-name">{ident(focus)}</div>
+                      <div className="type-txt">{focus.typeName || focus.typeCode || "Type unknown"} · {focus.operatorLabel}</div>
+                      <div className="selected-stats">
+                        <div><span className="nearest-label">Alt</span><b className="telemetry-val">{Math.round(currentAlt(focus)).toLocaleString()} ft</b></div>
+                        <div><span className="nearest-label">Spd</span><b className="telemetry-val">{Math.round(currentSpd(focus))} kt</b></div>
+                        <div><span className="nearest-label">Dist</span><b className="telemetry-val">{focus.distance} nm</b></div>
+                        <div><span className="nearest-label">State</span><b className={"state-" + focus.state}>{focus.state}</b></div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="rail-tabs">
+                    {[["aircraft", `Aircraft ${filtered.length}`],["events","Events"],["sessions","In coverage"]].map(([id, label]) => (
+                      <button key={id} className={"chip" + (railTab === id ? " on" : "")} onClick={() => setRailTab(id)}>{label}</button>
+                    ))}
+                  </div>
+                  {railTab === "aircraft" && <AircraftRail aircraft={filtered} selected={focus} onSelect={setSelected}/>}
+                  {railTab === "events" && <EventFeed events={data.events}/>}
+                  {railTab === "sessions" && <SessionTimeline sessions={data.sessions} aircraft={aircraft} onSelect={setSelected}/>}
+                </aside>
+              </div>
+            ) : (
+              <div className="today-grid">
+                <section className="gf-panel gf-wide"><h2>Sightings by hour</h2><HourlyChart hourly={data.hourly}/></section>
+                <section className="gf-panel"><h2>Category mix</h2><CategoryChart categories={data.categories}/></section>
+                <section className="gf-panel"><h2>Antenna coverage</h2><CoverageChart coverage={data.coverage}/></section>
+                <section className="gf-panel"><h2>Top types</h2><TopList items={data.top_types} color="#22D3EE" empty="No types yet"/></section>
+                <section className="gf-panel"><h2>Top operators</h2><TopList items={data.top_operators} color="#FBBF24" empty="No operators yet"/></section>
+                <section className="gf-panel"><h2>Range vs altitude</h2><RangeAlt aircraft={aircraft}/></section>
+                <section className="gf-panel gf-wide"><h2>Aircraft</h2><AircraftTable aircraft={filtered} selected={focus} onSelect={setSelected}/></section>
+                <section className="gf-panel"><h2>Altitude tracks</h2><AltitudeTrend aircraft={filtered.length ? filtered : aircraft}/></section>
+              </div>
+            )}
+            <div className="dashboard-footer">
+              ApexMoon Airspace · ADS-B · 5s capture · {(data.kpis.observations || data.kpis.total_sightings).toLocaleString()} observations · {new Date(data.generated_at).toLocaleTimeString()}
+            </div>
+          </React.Fragment>
+        )}
+      </main>
+      <AircraftDetail aircraft={selected} onClose={() => setSelected(null)}/>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

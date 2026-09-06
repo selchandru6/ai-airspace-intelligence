@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
+"""Poll dump1090's ``aircraft.json`` and append every observed aircraft to a
+CSV log and a SQLite database.
+
+Run:
+    airspace-logger                 # after `pip install -e .`
+    python -m airspace_intel.logger
+
+Stop with Ctrl+C. Safe to leave running for hours/days - the CSV rolls over
+to a timestamped part once it reaches MAX_CSV_MB (see airspace_intel.config).
 """
-Polls dump1090's aircraft.json every few seconds and appends each
-observed aircraft to a CSV log file.
 
-Usage:
-    python3 flight_log.py
-
-Stop with Ctrl+C. Safe to leave running for hours/days.
-"""
-
-import json
 import csv
-import time
+import json
 import os
 import sqlite3
 import tempfile
+import time
 from datetime import datetime, timezone
 
-# --- Configuration ---
-# Point this at your dump1090 checkout. Override with DUMP1090_DIR if it
-# lives somewhere else.
-BASE_DIR = os.path.expanduser(os.environ.get("DUMP1090_DIR", "~/dump1090-web"))
-AIRCRAFT_JSON = os.path.join(BASE_DIR, "public_html", "data", "aircraft.json")
-LOG_FILE = os.path.join(BASE_DIR, "flight_log.csv")
-DB_FILE = os.path.join(BASE_DIR, "flight_log.sqlite3")
-POLL_INTERVAL_SECONDS = 5
+from .config import (
+    AIRCRAFT_JSON,
+    CSV_PATH as LOG_FILE,
+    DATA_DIR,
+    DB_PATH as DB_FILE,
+    MAX_CSV_MB,
+    POLL_INTERVAL_SECONDS,
+)
 
 FIELDNAMES = [
     "timestamp_utc",
@@ -105,6 +106,23 @@ def ensure_log_header():
     os.replace(migrated_path, LOG_FILE)
 
 
+def rotate_if_needed():
+    """Roll the active CSV over to a timestamped part once it gets large.
+
+    The SQLite database keeps every observation; the CSV parts are a plain
+    text mirror, so splitting them keeps any single file easy to open.
+    """
+    if MAX_CSV_MB <= 0 or not os.path.exists(LOG_FILE):
+        return
+    if os.path.getsize(LOG_FILE) < MAX_CSV_MB * 1024 * 1024:
+        return
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    archived = os.path.join(DATA_DIR, f"flight_log-{stamp}.csv")
+    os.replace(LOG_FILE, archived)
+    ensure_log_header()
+    print(f"  rotated CSV -> {os.path.basename(archived)}")
+
+
 def json_value(value):
     """Keep nested dump1090 values losslessly inside one CSV cell."""
     if value is None:
@@ -157,7 +175,7 @@ def poll_once():
         with open(AIRCRAFT_JSON, "r") as f:
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        # dump1090 may be mid-write, or not running yet — just skip this cycle
+        # dump1090 may be mid-write, or not running yet - just skip this cycle
         return 0
 
     timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -241,15 +259,18 @@ def poll_once():
 
 
 def main():
+    os.makedirs(DATA_DIR, exist_ok=True)
     ensure_log_header()
     ensure_observation_db()
     print(f"Logging flights to: {LOG_FILE}")
     print(f"Reading from:       {AIRCRAFT_JSON}")
-    print(f"Polling every {POLL_INTERVAL_SECONDS}s — Ctrl+C to stop.\n")
+    print(f"Rotating CSV at:    {MAX_CSV_MB} MB" if MAX_CSV_MB > 0 else "CSV rotation: off")
+    print(f"Polling every {POLL_INTERVAL_SECONDS}s - Ctrl+C to stop.\n")
 
     total = 0
     try:
         while True:
+            rotate_if_needed()
             n = poll_once()
             total += n
             if n:

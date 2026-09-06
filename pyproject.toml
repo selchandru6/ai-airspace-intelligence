@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-airspace-intelligence"
+version = "0.1.0"
+description = "Local ADS-B flight logging and dashboards for dump1090 (offline, self-hosted)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Chandran Sellappan" }]
+keywords = ["adsb", "dump1090", "aviation", "dashboard", "flask"]
+
+dependencies = [
+    "flask>=3.0",
+    "python-dotenv>=1.0",
+]
+
+[project.urls]
+Homepage = "https://apexmoonai.com/"
+Repository = "https://github.com/selchandru6/ai-airspace-intelligence"
+
+[project.scripts]
+airspace-logger = "airspace_intel.logger:main"
+airspace-api = "airspace_intel.api_server:main"
+airspace-dashboard = "airspace_intel.dashboard_server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
