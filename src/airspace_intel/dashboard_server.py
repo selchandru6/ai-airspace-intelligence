@@ -8,12 +8,22 @@ Run:
 This is the minimal alternative to ``airspace-api``; it only needs the CSV
 log, not Flask or the dump1090 aircraft database. Both servers listen on the
 same port, so run one at a time.
+
+``GET /flight_log.csv`` returns the full history: every ``data/flight_log*.csv``
+part concatenated (oldest rotated part first, active file last) with the
+header row emitted once.
 """
 
+import shutil
 import ssl
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 from .config import CERT_FILE, CSV_PATH, KEY_FILE, PORT, STATIC_DIR
+
+
+def csv_parts():
+    """Every flight-log CSV in chronological order (rotated parts, then active)."""
+    return sorted(CSV_PATH.parent.glob("flight_log*.csv"))
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
@@ -22,11 +32,34 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
     def translate_path(self, path):
         clean = path.split("?", 1)[0]
-        if clean == "/flight_log.csv":
-            return str(CSV_PATH)
         if clean in ("/", "/flightsdashboard.html"):
             return str(STATIC_DIR / "dashboard.html")
         return super().translate_path(path)
+
+    def do_GET(self):
+        if self.path.split("?", 1)[0] == "/flight_log.csv":
+            self._serve_full_log()
+            return
+        super().do_GET()
+
+    def _serve_full_log(self):
+        parts = csv_parts()
+        if not parts:
+            self.send_error(404, "no flight log yet - is the logger running?")
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/csv; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        header_written = False
+        for part in parts:
+            with open(part, "rb") as fh:
+                first_line = fh.readline()
+                if not header_written:
+                    self.wfile.write(first_line)
+                    header_written = True
+                # subsequent parts repeat the same header - skip it
+                shutil.copyfileobj(fh, self.wfile)
 
 
 def main():

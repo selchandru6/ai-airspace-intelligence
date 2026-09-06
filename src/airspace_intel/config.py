@@ -64,6 +64,11 @@ POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "5"))
 LIVE_THRESHOLD_SECONDS = 30
 VALID_RANGES = ("hour", "today", "week", "all")
 
+# Safety cap on how many observation rows a single /api/data response will
+# load from the database. The full history always stays in the DB; this only
+# bounds one response. At ~75k rows/day, 500k covers roughly a week of "all".
+MAX_ROWS = int(os.environ.get("MAX_ROWS", "500000"))
+
 CONFIG = {
     "vertical_rate_tolerance": 100,
     "rapid_climb_threshold": 2500,

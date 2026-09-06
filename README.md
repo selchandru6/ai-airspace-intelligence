@@ -86,6 +86,7 @@ convenience (real environment variables win).
 | `DATA_DIR` | `./data` | where the logger **writes** the CSV log, its rotated parts and the SQLite db |
 | `RECEIVER_LAT` / `RECEIVER_LON` | `0.0` | receiver position; match your dump1090 `--lat`/`--lon` |
 | `MAX_CSV_MB` | `100` | roll `flight_log.csv` to `flight_log-<timestamp>.csv` at this size (`0` disables) |
+| `MAX_ROWS` | `500000` | max observation rows one `/api/data` response loads from the DB (newest first) |
 | `HOST` / `PORT` | `0.0.0.0` / `1978` | HTTPS bind address and port |
 | `POLL_INTERVAL_SECONDS` | `5` | logger poll cadence |
 | `CERT_DIR` | `./certs` | TLS cert/key location |
@@ -93,13 +94,22 @@ convenience (real environment variables win).
 Deeper tuning (vertical-rate thresholds, range rings, session gaps) lives in
 the `CONFIG` dict in `src/airspace_intel/config.py`.
 
-## Data files and size
+## Where the dashboards read their data
 
-The SQLite database is the dashboard's primary source and comfortably handles
-hundreds of MB. The CSV is a plain-text mirror; `MAX_CSV_MB` keeps any single
-CSV file small by rotating to timestamped parts (`flight_log-20260906T210000Z.csv`).
-The API reads the database if present, otherwise every `data/flight_log*.csv`
-part. Everything under `data/` is git-ignored.
+Both dashboards read from `DATA_DIR` (`./data` by default). Nothing is ever
+deleted there — the logger only appends and rotates.
+
+| Dashboard | Reads from | History available |
+|-----------|-----------|-------------------|
+| `airspace-api` (full) | `data/flight_log.sqlite3` via `/api/data`; falls back to every `data/flight_log*.csv` part if the DB is missing | **Entire database.** One response is capped at `MAX_ROWS` rows (newest first) as a safety limit — raise it if you need a longer `all` view. `meta.row_cap_hit` in the response tells you when the cap bites. |
+| `airspace-dashboard` (lightweight) | `GET /flight_log.csv`, which concatenates **every** `data/flight_log*.csv` part (oldest rotated part first, active file last, one header row) | **All CSV parts**, including rotated ones. |
+
+The SQLite database is never rotated; it holds every observation since the
+logger first ran and comfortably handles hundreds of MB. The CSV is a
+plain-text mirror — `MAX_CSV_MB` rolls it over to timestamped parts
+(`flight_log-20260906T210000Z.csv`) so no single file gets unwieldy, and the
+merge above stitches them back together for the dashboard. Everything under
+`data/` is git-ignored.
 
 ## License
 

@@ -31,6 +31,7 @@ from .config import (
     HOST,
     KEY_FILE,
     LIVE_THRESHOLD_SECONDS,
+    MAX_ROWS,
     OL_DIR,
     PORT,
     RECEIVER_CONFIGURED,
@@ -192,18 +193,20 @@ def read_rows(range_filter):
         with sqlite3.connect(DB_PATH) as db:
             if start_epoch is None:
                 payload_rows = [json.loads(row[0]) for row in db.execute(
-                    "SELECT payload FROM observations ORDER BY timestamp_epoch DESC LIMIT 150000"
+                    "SELECT payload FROM observations ORDER BY timestamp_epoch DESC LIMIT ?",
+                    (MAX_ROWS,),
                 )]
                 payload_rows.reverse()
             else:
                 payload_rows = [json.loads(row[0]) for row in db.execute(
-                    "SELECT payload FROM observations WHERE timestamp_epoch >= ? ORDER BY timestamp_epoch DESC LIMIT 150000",
-                    (start_epoch,),
+                    "SELECT payload FROM observations WHERE timestamp_epoch >= ? "
+                    "ORDER BY timestamp_epoch DESC LIMIT ?",
+                    (start_epoch, MAX_ROWS),
                 )]
                 payload_rows.reverse()
     if not payload_rows:
-        # No database yet - fall back to the CSV log and any rotated parts
-        # (flight_log.csv, flight_log-20260906-120000.csv, ...).
+        # No database yet - fall back to the CSV log and every rotated part
+        # (flight_log-20260906T210000Z.csv, ..., flight_log.csv) in order.
         for part in sorted(CSV_PATH.parent.glob("flight_log*.csv")):
             with open(part, newline="") as fh:
                 payload_rows.extend(csv.DictReader(fh))
@@ -485,6 +488,12 @@ def build_response(range_filter):
         "aircraft": aircraft,
         "events": build_events(rows),
         "generated_at": now.isoformat(),
+        "meta": {
+            "range": range_filter,
+            "rows_loaded": len(rows),
+            "row_cap": MAX_ROWS,
+            "row_cap_hit": len(rows) >= MAX_ROWS,
+        },
     }
 
 
